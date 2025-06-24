@@ -15,16 +15,29 @@ export interface User {
     isAuthenticated: boolean;
   }
   
-  // Course & Academic Types
+  // Course Types
   export interface Course {
     id: string;
     userId: string;
     name: string;
-    endDate: string; // When the course ends - drives quiz scheduling
-    topics: string[];
+    endDate: string;
+    description?: string;        
     syllabusUrl?: string;
+    topicsExtracted: boolean;    
+    createdAt: string;
+    updatedAt: string;         
+  }
+  // Topic Types
+  export interface Topic {
+    id: string;
+    courseId: string;
+    title: string;
+    content: string;
+    orderIndex: number;
     createdAt: string;
   }
+  
+
   
   // Quiz Types
   export interface QuizQuestion {
@@ -45,7 +58,7 @@ export interface User {
     scheduledFor: string;
     completedAt?: string;
     score?: number;
-    timeSpent?: number; // in seconds
+    timeSpent?: number;
   }
   
   // API Response Types
