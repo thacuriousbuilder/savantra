@@ -1,4 +1,4 @@
-// src/stores/courseStore.ts - UPDATED WITH PROPER TYPES
+
 import { create } from 'zustand';
 import { Course, Topic } from '../types';
 

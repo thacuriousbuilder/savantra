@@ -1,4 +1,4 @@
-// src/services/supabase/courses.ts
+
 import { supabase } from './config';
 import { Course, Topic } from '../../types';
 
