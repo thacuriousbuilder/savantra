@@ -1,4 +1,4 @@
-// src/services/supabase/config.ts
+
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 
