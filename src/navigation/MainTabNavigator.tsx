@@ -5,6 +5,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../constants/theme';
 import { CreateStackNavigator } from './stacks/CreateStack';
 import { CoursesStackNavigator } from './stacks/CoursesStack';
+import { CompletePipelineTest } from '../components/test/CompletePipeLineTest';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -39,10 +40,7 @@ const QuizzesScreen = () => (
 );
 
 const ProfileScreen = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderText}>👤 Profile Screen</Text>
-    <Text>Profile settings coming soon!</Text>
-  </View>
+  <CompletePipelineTest />
 );
 
 export const MainTabNavigator: React.FC = () => {
