@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../constants/theme';
 import { CreateStackNavigator } from './stacks/CreateStack';
+import { CoursesStackNavigator } from './stacks/CoursesStack';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -22,12 +24,12 @@ const HomeScreen = () => (
   </View>
 );
 
-const CoursesScreen = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderText}>📚 Courses Screen</Text>
-    <Text>Course management coming soon!</Text>
-  </View>
-);
+// const CoursesScreen = () => (
+//   <View style={styles.placeholder}>
+//     <Text style={styles.placeholderText}>📚 Courses Screen</Text>
+//     <Text>Course management coming soon!</Text>
+//   </View>
+// );
 
 const QuizzesScreen = () => (
   <View style={styles.placeholder}>
@@ -72,7 +74,7 @@ export const MainTabNavigator: React.FC = () => {
       />
       <Tab.Screen 
         name="Courses" 
-        component={CoursesScreen}
+        component={CoursesStackNavigator}
         options={{ 
           tabBarLabel: 'Courses',
           tabBarIcon: () => <Text style={styles.tabIcon}>📚</Text>
