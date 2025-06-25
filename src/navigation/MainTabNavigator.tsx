@@ -1,7 +1,10 @@
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { colors, spacing, fontSize } from '../constants/theme';
+import { CreateStackNavigator } from './stacks/CreateStack';
+import { CoursesStackNavigator } from './stacks/CoursesStack';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -13,7 +16,7 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Placeholder screens
+// Placeholder screens (unchanged)
 const HomeScreen = () => (
   <View style={styles.placeholder}>
     <Text style={styles.placeholderText}>🏠 Home Screen</Text>
@@ -21,63 +24,12 @@ const HomeScreen = () => (
   </View>
 );
 
-const CoursesScreen = () => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderText}>📚 Courses Screen</Text>
-    <Text>Course management coming soon!</Text>
-  </View>
-);
-
-const CreateScreen = () => {
-  const handleCreateOption = (option: string) => {
-    Alert.alert('Create', `${option} creation coming soon!`);
-  };
-
-  return (
-    <View style={styles.createContainer}>
-      <Text style={styles.createTitle}>Create New</Text>
-      <Text style={styles.createSubtitle}>What would you like to add?</Text>
-      
-      <View style={styles.createOptions}>
-        <TouchableOpacity 
-          style={styles.createOption} 
-          onPress={() => handleCreateOption('Syllabus Upload')}
-        >
-          <Text style={styles.createOptionIcon}>📄</Text>
-          <Text style={styles.createOptionText}>Upload Syllabus</Text>
-          <Text style={styles.createOptionDesc}>Add course syllabus & extract topics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.createOption} 
-          onPress={() => handleCreateOption('Notes Upload')}
-        >
-          <Text style={styles.createOptionIcon}>📝</Text>
-          <Text style={styles.createOptionText}>Upload Notes</Text>
-          <Text style={styles.createOptionDesc}>Add study materials & documents</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.createOption} 
-          onPress={() => handleCreateOption('Task Creation')}
-        >
-          <Text style={styles.createOptionIcon}>✅</Text>
-          <Text style={styles.createOptionText}>Add Task</Text>
-          <Text style={styles.createOptionDesc}>Create assignment or deadline</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.createOption} 
-          onPress={() => handleCreateOption('Course Creation')}
-        >
-          <Text style={styles.createOptionIcon}>🎓</Text>
-          <Text style={styles.createOptionText}>New Course</Text>
-          <Text style={styles.createOptionDesc}>Set up a new course</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-};
+// const CoursesScreen = () => (
+//   <View style={styles.placeholder}>
+//     <Text style={styles.placeholderText}>📚 Courses Screen</Text>
+//     <Text>Course management coming soon!</Text>
+//   </View>
+// );
 
 const QuizzesScreen = () => (
   <View style={styles.placeholder}>
@@ -122,7 +74,7 @@ export const MainTabNavigator: React.FC = () => {
       />
       <Tab.Screen 
         name="Courses" 
-        component={CoursesScreen}
+        component={CoursesStackNavigator}
         options={{ 
           tabBarLabel: 'Courses',
           tabBarIcon: () => <Text style={styles.tabIcon}>📚</Text>
@@ -130,7 +82,7 @@ export const MainTabNavigator: React.FC = () => {
       />
       <Tab.Screen 
         name="Create" 
-        component={CreateScreen}
+        component={CreateStackNavigator}
         options={{ 
           tabBarLabel: '',
           tabBarIcon: ({ focused }) => (
@@ -193,49 +145,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: 'bold',
-  },
-
-  // Create screen styles
-  createContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
-  },
-  createTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  createSubtitle: {
-    fontSize: fontSize.base,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
-  createOptions: {
-    gap: spacing.md,
-  },
-  createOption: {
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-  },
-  createOptionIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  createOptionText: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  createOptionDesc: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
   },
 });
