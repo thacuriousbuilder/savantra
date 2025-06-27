@@ -91,9 +91,10 @@ const CreateCourseScreenWrapper: React.FC<any> = ({ navigation }) => (
   <CreateCourseScreen 
     onBack={() => navigation.goBack()}
     onSuccess={(courseId) => {
-      // Navigate back to courses or show success
-      navigation.navigate('CreateOptions');
-      // Could also navigate to MainTab Courses if needed
+      // Navigate to Courses tab to show the newly created course
+      navigation.getParent()?.navigate('Courses', {
+        screen: 'CoursesList'
+      });
     }}
   />
 );
