@@ -86,14 +86,15 @@ const CreateOptionsScreen: React.FC<CreateOptionsScreenProps> = ({ navigation })
   );
 };
 
-// Create Course Screen Wrapper
+// Create Course Screen Wrapper - UPDATED for new navigation flow
 const CreateCourseScreenWrapper: React.FC<any> = ({ navigation }) => (
   <CreateCourseScreen 
     onBack={() => navigation.goBack()}
-    onSuccess={(courseId) => {
-      // Navigate to Courses tab to show the newly created course
+    onSuccess={(course) => {
+      // Navigate to AddContent in CoursesStack with the course object
       navigation.getParent()?.navigate('Courses', {
-        screen: 'CoursesList'
+        screen: 'AddContent',
+        params: { course }
       });
     }}
   />

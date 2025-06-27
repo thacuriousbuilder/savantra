@@ -1,5 +1,3 @@
-// File: src/screens/course/AddContentScreen.tsx
-
 import React, { useState } from 'react';
 import {
   View,
@@ -23,27 +21,28 @@ interface AddContentScreenProps {
   onComplete: (topics: ExtractedTopic[]) => void;
 }
 
-type ProcessingStep = 'idle' | 'reading' | 'extracting' | 'reviewing' | 'saving';
+type ProcessingStep = 'idle' | 'reading' | 'extracting' | 'complete';
 
 export const AddContentScreen: React.FC<AddContentScreenProps> = ({
   course,
   onSkip,
   onComplete,
 }) => {
+  // Debug logging to see what course object is being passed
+  console.log('AddContentScreen received course:', course);
+  console.log('Course name:', course?.name);
+  console.log('Course object keys:', Object.keys(course || {}));
+
   const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
   const [processingStep, setProcessingStep] = useState<ProcessingStep>('idle');
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [progress, setProgress] = useState(0);
-  const [extractedTopics, setExtractedTopics] = useState<ExtractedTopic[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
 
   // Handle file selection
   const handleFileSelected = (file: UploadedFile) => {
     setSelectedFile(file);
     setUploadState('idle');
     setProcessingStep('idle');
-    setExtractedTopics([]);
-    setIsEditing(false);
   };
 
   // Process uploaded syllabus
@@ -83,15 +82,21 @@ export const AddContentScreen: React.FC<AddContentScreenProps> = ({
         throw new Error(topicsResult.error || 'Failed to extract topics');
       }
 
-      // Success!
+      // Success! Navigate immediately to ReviewTopics
       setProgress(100);
-      setProcessingStep('reviewing');
+      setProcessingStep('complete');
       setUploadState('success');
-      setExtractedTopics(topicsResult.topics);
       
+      // Show success message and auto-navigate
       Alert.alert(
         'Success!', 
-        `Extracted ${topicsResult.topics.length} topics from your syllabus. Review them below.`
+        `Extracted ${topicsResult.topics.length} topics from your syllabus.`,
+        [
+          { 
+            text: 'Review Topics', 
+            onPress: () => onComplete(topicsResult.topics)
+          }
+        ]
       );
 
     } catch (error: any) {
@@ -99,48 +104,6 @@ export const AddContentScreen: React.FC<AddContentScreenProps> = ({
       setUploadState('error');
       setProgress(0);
       Alert.alert('Processing Failed', error.message || 'Failed to process syllabus');
-    }
-  };
-
-  // Add a new topic manually
-  const addTopic = () => {
-    const newTopic: ExtractedTopic = {
-      id: `topic-${extractedTopics.length + 1}`,
-      title: 'New Topic',
-      order: extractedTopics.length + 1,
-      keywords: [],
-    };
-    setExtractedTopics([...extractedTopics, newTopic]);
-    setIsEditing(true);
-  };
-
-  // Remove a topic
-  const removeTopic = (topicId: string) => {
-    const updatedTopics = extractedTopics
-      .filter(topic => topic.id !== topicId)
-      .map((topic, index) => ({ ...topic, order: index + 1 }));
-    setExtractedTopics(updatedTopics);
-  };
-
-  // Save topics and continue
-  const saveAndContinue = async () => {
-    if (extractedTopics.length === 0) {
-      Alert.alert('No Topics', 'Please extract topics from syllabus or add them manually');
-      return;
-    }
-
-    setProcessingStep('saving');
-    
-    try {
-      // TODO: Save topics to database here
-      // await CourseService.saveTopics(course.id, extractedTopics);
-      
-      Alert.alert('Success!', 'Course content added successfully', [
-        { text: 'Continue', onPress: () => onComplete(extractedTopics) }
-      ]);
-    } catch (error: any) {
-      setProcessingStep('reviewing');
-      Alert.alert('Save Failed', 'Failed to save course topics. Please try again.');
     }
   };
 
@@ -156,8 +119,12 @@ export const AddContentScreen: React.FC<AddContentScreenProps> = ({
     );
   };
 
-  const isProcessing = processingStep === 'reading' || processingStep === 'extracting' || processingStep === 'saving';
-  const hasTopics = extractedTopics.length > 0;
+  // Add topics manually (navigate to ReviewTopics with empty array)
+  const handleAddManually = () => {
+    onComplete([]); // Navigate to ReviewTopics with no initial topics
+  };
+
+  const isProcessing = processingStep === 'reading' || processingStep === 'extracting';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -171,13 +138,20 @@ export const AddContentScreen: React.FC<AddContentScreenProps> = ({
             </Text>
             <View style={styles.courseInfo}>
               <Text style={styles.courseLabel}>Adding content to:</Text>
-              <Text style={styles.courseName}>{course.name}</Text>
+              <Text style={styles.courseName}>
+                {course?.name || 'New Course'}
+              </Text>
             </View>
           </View>
 
           {/* File Upload Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>1. Upload Syllabus</Text>
+            <Text style={styles.sectionTitle}>Upload Syllabus</Text>
+            <Text style={styles.sectionDescription}>
+              Select a PDF or Word document containing your course syllabus. 
+              Our AI will extract the main topics and learning objectives.
+            </Text>
+            
             <FileUploadComponent
               onFileSelected={handleFileSelected}
               uploadState={uploadState}
@@ -187,92 +161,72 @@ export const AddContentScreen: React.FC<AddContentScreenProps> = ({
               disabled={isProcessing}
             />
             
-            {selectedFile && !hasTopics && (
+            {selectedFile && processingStep === 'idle' && (
               <TouchableOpacity
-                style={[styles.processButton, isProcessing && styles.buttonDisabled]}
+                style={styles.processButton}
                 onPress={processSyllabus}
-                disabled={isProcessing}
               >
-                <Text style={styles.processButtonText}>
-                  {processingStep === 'reading' && 'Reading file...'}
-                  {processingStep === 'extracting' && 'Extracting topics...'}
-                  {processingStep !== 'reading' && processingStep !== 'extracting' && 'Extract Topics'}
-                </Text>
+                <Text style={styles.processButtonText}>Extract Topics</Text>
               </TouchableOpacity>
+            )}
+
+            {isProcessing && (
+              <View style={styles.processingInfo}>
+                <Text style={styles.processingText}>
+                  {processingStep === 'reading' && '📖 Reading file content...'}
+                  {processingStep === 'extracting' && '🧠 Extracting topics with AI...'}
+                </Text>
+                <Text style={styles.processingSubtext}>
+                  This may take a few moments
+                </Text>
+              </View>
             )}
           </View>
 
-          {/* Topics Review Section */}
-          {hasTopics && (
-            <View style={styles.section}>
-              <View style={styles.topicsHeader}>
-                <Text style={styles.sectionTitle}>2. Review Topics</Text>
-                <TouchableOpacity style={styles.addTopicButton} onPress={addTopic}>
-                  <Text style={styles.addTopicText}>+ Add Topic</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <Text style={styles.topicsDescription}>
-                {extractedTopics.length} topics extracted. You can edit, add, or remove topics below.
-              </Text>
-
-              {extractedTopics.map((topic, index) => (
-                <View key={topic.id} style={styles.topicCard}>
-                  <View style={styles.topicHeader}>
-                    <Text style={styles.topicNumber}>{index + 1}.</Text>
-                    <Text style={styles.topicTitle}>{topic.title}</Text>
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removeTopic(topic.id)}
-                    >
-                      <Text style={styles.removeButtonText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {topic.keywords && topic.keywords.length > 0 && (
-                    <View style={styles.keywordsContainer}>
-                      {topic.keywords.map((keyword: string, keyIndex: number) => (
-                        <View key={keyIndex} style={styles.keywordTag}>
-                          <Text style={styles.keywordText}>{keyword}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+          {/* Alternative Options */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Alternative Options</Text>
+            
+            <TouchableOpacity 
+              style={styles.manualButton} 
+              onPress={handleAddManually}
+              disabled={isProcessing}
+            >
+              <View style={styles.optionContent}>
+                <Text style={styles.optionIcon}>✏️</Text>
+                <View style={styles.optionText}>
+                  <Text style={styles.optionTitle}>Add Topics Manually</Text>
+                  <Text style={styles.optionDescription}>
+                    Create course topics yourself without uploading a file
+                  </Text>
                 </View>
-              ))}
-            </View>
-          )}
+              </View>
+            </TouchableOpacity>
 
-          {/* Action Buttons */}
-          <View style={styles.actions}>
-            {hasTopics ? (
-              <TouchableOpacity
-                style={[styles.continueButton, isProcessing && styles.buttonDisabled]}
-                onPress={saveAndContinue}
-                disabled={isProcessing}
-              >
-                <Text style={styles.continueButtonText}>
-                  {processingStep === 'saving' ? 'Saving...' : 'Save & Continue'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.manualButton} onPress={addTopic}>
-                <Text style={styles.manualButtonText}>Add Topics Manually</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-              <Text style={styles.skipButtonText}>Skip for Now</Text>
+            <TouchableOpacity 
+              style={styles.skipButton} 
+              onPress={handleSkip}
+              disabled={isProcessing}
+            >
+              <View style={styles.optionContent}>
+                <Text style={styles.optionIcon}>⏭️</Text>
+                <View style={styles.optionText}>
+                  <Text style={styles.optionTitle}>Skip for Now</Text>
+                  <Text style={styles.optionDescription}>
+                    Add course content later from course settings
+                  </Text>
+                </View>
+              </View>
             </TouchableOpacity>
           </View>
 
           {/* Help Text */}
           <View style={styles.helpContainer}>
-            <Text style={styles.helpTitle}>💡 Tips</Text>
-            <Text style={styles.helpText}>• Upload your course syllabus for best results</Text>
-            <Text style={styles.helpText}>• AI will extract main topics and learning objectives</Text>
-            <Text style={styles.helpText}>• You can edit, add, or remove topics before saving</Text>
-            <Text style={styles.helpText}>• Topics help generate personalized quizzes later</Text>
+            <Text style={styles.helpTitle}>💡 Tips for Best Results</Text>
+            <Text style={styles.helpText}>• Upload your official course syllabus for best topic extraction</Text>
+            <Text style={styles.helpText}>• PDF and Word documents work best</Text>
+            <Text style={styles.helpText}>• Clear, text-based documents give better results than scanned images</Text>
+            <Text style={styles.helpText}>• You can always edit the extracted topics in the next step</Text>
           </View>
         </View>
       </ScrollView>
@@ -337,6 +291,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  sectionDescription: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
     marginBottom: spacing.md,
   },
   processButton: {
@@ -351,117 +311,61 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: '600',
   },
-  topicsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  addTopicButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  addTopicText: {
-    color: colors.primary,
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-  },
-  topicsDescription: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  topicCard: {
+  processingInfo: {
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  topicHeader: {
-    flexDirection: 'row',
+    marginTop: spacing.md,
     alignItems: 'center',
-    marginBottom: spacing.sm,
   },
-  topicNumber: {
+  processingText: {
     fontSize: fontSize.base,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginRight: spacing.sm,
-    minWidth: 20,
-  },
-  topicTitle: {
-    flex: 1,
-    fontSize: fontSize.base,
-    fontWeight: '600',
     color: colors.textPrimary,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
   },
-  removeButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  removeButtonText: {
-    color: colors.accent,
-    fontSize: fontSize.base,
-    fontWeight: 'bold',
-  },
-  keywordsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  keywordTag: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  keywordText: {
+  processingSubtext: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
-  actions: {
-    marginBottom: spacing.xl,
-  },
-  continueButton: {
-    backgroundColor: colors.secondary,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  continueButtonText: {
-    color: colors.white,
-    fontSize: fontSize.base,
-    fontWeight: '600',
-  },
   manualButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
+    padding: spacing.md,
     marginBottom: spacing.md,
-  },
-  manualButtonText: {
-    color: colors.white,
-    fontSize: fontSize.base,
-    fontWeight: '600',
   },
   skipButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.inputBorder,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
   },
-  skipButtonText: {
-    color: colors.textSecondary,
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  optionIcon: {
+    fontSize: 24,
+  },
+  optionText: {
+    flex: 1,
+  },
+  optionTitle: {
     fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  optionDescription: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   helpContainer: {
     backgroundColor: '#f0f9ff',

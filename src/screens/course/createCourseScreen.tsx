@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   View,
@@ -13,10 +12,11 @@ import {
 import { colors, spacing, fontSize, borderRadius } from '../../constants/theme';
 import { useCourseStore } from '../../stores/courseStore';
 import { createCourseSchema, CreateCourseFormData, COURSE_FORM_FIELDS } from '../../schemas/courseSchema';
+import { Course } from '../../types';
 
 interface CreateCourseScreenProps {
   onBack: () => void;
-  onSuccess: (courseId: string) => void;
+  onSuccess: (course: Course) => void; // UPDATED: Now passes full course object
 }
 
 export const CreateCourseScreen: React.FC<CreateCourseScreenProps> = ({
@@ -30,7 +30,7 @@ export const CreateCourseScreen: React.FC<CreateCourseScreenProps> = ({
   });
   
   const [errors, setErrors] = useState<Partial<Record<keyof CreateCourseFormData, string>>>({});
-  const { createCourse, isLoading } = useCourseStore();
+  const { createCourse, isLoading, courses } = useCourseStore(); // Added courses to get the created course
 
   // Format date for input (YYYY-MM-DD)
   const formatDateForInput = (date: Date): string => {
@@ -74,15 +74,18 @@ export const CreateCourseScreen: React.FC<CreateCourseScreenProps> = ({
       return;
     }
 
-    const success = await createCourse({
+    const result = await createCourse({
       name: formData.name,
       endDate: formData.endDate,
       description: formData.description || undefined,
     });
 
-    if (success) {
+    if (result.success && result.course) {
       Alert.alert('Success!', 'Course created successfully', [
-        { text: 'OK', onPress: () => onSuccess('new-course-id') }
+        { 
+          text: 'Continue', 
+          onPress: () => onSuccess(result.course!)
+        }
       ]);
     } else {
       Alert.alert('Error', 'Failed to create course. Please try again.');

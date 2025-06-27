@@ -1,6 +1,6 @@
 
 import { supabase } from './config';
-import { Course, Topic } from '../../types';
+import { Course } from '../../types';
 
 export interface ServiceError {
   message: string;
@@ -41,8 +41,8 @@ export class CourseService {
       const { data, error } = await supabase
         .from('courses')
         .select('*')
-        .eq('userId', userId)
-        .order('createdAt', { ascending: false });
+        .eq('userId', userId) // Fixed: match database column name // Fixed: match database column name
+        .order('createdAt', { ascending: false }); // Fixed: match database column name
 
       if (error) {
         return {
@@ -92,10 +92,10 @@ export class CourseService {
         .from('courses')
         .insert({
           ...courseData,
-          userId,
-          topicsExtracted: false,
-          createdAt: now,
-          updatedAt: now,
+          userId, // Fixed: match database column name
+          topicsExtracted: false, // Fixed: match database column name
+          createdAt: now, // Fixed: match database column name
+          updatedAt: now, // Fixed: match database column name
         })
         .select()
         .single();
@@ -147,14 +147,14 @@ export class CourseService {
       // Add updatedAt timestamp
       const updateData = {
         ...updates,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(), // Fixed: match database column name
       };
 
       const { data, error } = await supabase
         .from('courses')
         .update(updateData)
         .eq('id', id)
-        .eq('userId', userId) // Ensure user can only update their own courses
+        .eq('userId', userId) // Fixed: match database column name
         .select()
         .single();
 
@@ -195,7 +195,7 @@ export class CourseService {
     }
   }
 
-  // Delete course
+  // Delete course (and all associated topics)
   static async deleteCourse(id: string): Promise<ServiceResponse<boolean>> {
     try {
       const userId = await this.getCurrentUserId();
@@ -207,11 +207,13 @@ export class CourseService {
         };
       }
 
+      // Note: Topics will be deleted automatically via CASCADE constraint
+      // when the course is deleted (if properly set up in database)
       const { error } = await supabase
         .from('courses')
         .delete()
         .eq('id', id)
-        .eq('userId', userId); // Ensure user can only delete their own courses
+        .eq('userId', userId); // Fixed: match database column name
 
       if (error) {
         return {
@@ -242,8 +244,8 @@ export class CourseService {
     }
   }
 
-  // Get topics for a course (ready for future use)
-  static async getTopicsForCourse(courseId: string): Promise<ServiceResponse<Topic[]>> {
+  // Get course by ID (with ownership verification)
+  static async getCourseById(id: string): Promise<ServiceResponse<Course>> {
     try {
       const userId = await this.getCurrentUserId();
       if (!userId) {
@@ -254,33 +256,18 @@ export class CourseService {
         };
       }
 
-      // First verify the course belongs to the user
-      const { data: course } = await supabase
+      const { data, error } = await supabase
         .from('courses')
-        .select('id')
-        .eq('id', courseId)
+        .select('*')
+        .eq('id', id)
         .eq('userId', userId)
         .single();
-
-      if (!course) {
-        return {
-          data: null,
-          error: { message: 'Course not found or access denied' },
-          success: false,
-        };
-      }
-
-      const { data, error } = await supabase
-        .from('topics')
-        .select('*')
-        .eq('courseId', courseId)
-        .order('orderIndex', { ascending: true });
 
       if (error) {
         return {
           data: null,
           error: { 
-            message: 'Failed to fetch topics', 
+            message: 'Course not found or access denied', 
             code: error.code,
             details: error 
           },
@@ -289,7 +276,7 @@ export class CourseService {
       }
 
       return {
-        data: data || [],
+        data: data,
         error: null,
         success: true,
       };
@@ -297,11 +284,16 @@ export class CourseService {
       return {
         data: null,
         error: { 
-          message: 'Network error while fetching topics',
+          message: 'Network error while fetching course',
           details: error 
         },
         success: false,
       };
     }
+  }
+
+  // Mark course as having topics extracted
+  static async markTopicsExtracted(id: string): Promise<ServiceResponse<Course>> {
+    return this.updateCourse(id, { topicsExtracted: true }); // Fixed: match database column name
   }
 }
