@@ -84,10 +84,11 @@ export const CourseCreationTester: React.FC = () => {
     };
 
     try {
-      const success = await createCourse(testCourse);
+      const result = await createCourse(testCourse);
       
-      if (success) {
+      if (result.success && result.course) {
         addTestResult('✅ Course creation API succeeded');
+        addTestResult(`✅ Course ID: ${result.course.id}`);
         
         // Force a small delay and check multiple times
         for (let i = 0; i < 5; i++) {
@@ -121,8 +122,8 @@ export const CourseCreationTester: React.FC = () => {
 
     for (const course of testCourses) {
       try {
-        const success = await createCourse(course);
-        addTestResult(success ? `✅ Created: ${course.name}` : `❌ Failed: ${course.name}`);
+        const result = await createCourse(course);
+        addTestResult(result.success ? `✅ Created: ${course.name}` : `❌ Failed: ${course.name}`);
       } catch (error) {
         addTestResult(`❌ Error creating ${course.name}: ${error}`);
       }
@@ -139,22 +140,22 @@ export const CourseCreationTester: React.FC = () => {
     // Very long name (store will accept, but UI form should reject)
     const longName = 'A'.repeat(150);
     try {
-      const success = await createCourse({
+      const result = await createCourse({
         name: longName,
         endDate: '2024-12-31'
       });
-      addTestResult(success ? '⚠️ Long name accepted by store (UI should validate)' : '❌ Long name rejected by store');
+      addTestResult(result.success ? '⚠️ Long name accepted by store (UI should validate)' : '❌ Long name rejected by store');
     } catch (error) {
       addTestResult('❌ Long name caused store error');
     }
 
     // Special characters (should be fine)
     try {
-      const success = await createCourse({
+      const result = await createCourse({
         name: 'Course with émojis 🎓 and spëcial chars!',
         endDate: '2024-12-31'
       });
-      addTestResult(success ? '✅ Special characters accepted' : '❌ Special characters rejected');
+      addTestResult(result.success ? '✅ Special characters accepted' : '❌ Special characters rejected');
     } catch (error) {
       addTestResult('❌ Special characters caused error');
     }
@@ -162,11 +163,11 @@ export const CourseCreationTester: React.FC = () => {
     // Today's date (should be fine)
     const today = new Date().toISOString().split('T')[0];
     try {
-      const success = await createCourse({
+      const result = await createCourse({
         name: 'Today Course',
         endDate: today
       });
-      addTestResult(success ? '✅ Today\'s date accepted' : '❌ Today\'s date rejected');
+      addTestResult(result.success ? '✅ Today\'s date accepted' : '❌ Today\'s date rejected');
     } catch (error) {
       addTestResult('❌ Today\'s date caused error');
     }

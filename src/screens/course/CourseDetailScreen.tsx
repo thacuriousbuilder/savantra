@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,19 +11,22 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize, borderRadius } from '../../constants/theme';
 import { useCourseStore } from '../../stores/courseStore';
-import { Course } from '../../types';
+import { Course, Topic } from '../../types';
 import { createCourseSchema, CreateCourseFormData } from '../../schemas/courseSchema';
+import { TopicService } from '../../services/supabase/topic';
 
 interface CourseDetailScreenProps {
   course: Course;
   onBack: () => void;
   onDeleted: () => void;
+  onAddContent?: () => void;
 }
 
 export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   course,
   onBack,
   onDeleted,
+  onAddContent,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<CreateCourseFormData>({
@@ -34,7 +36,23 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
   });
   const [errors, setErrors] = useState<Partial<Record<keyof CreateCourseFormData, string>>>({});
 
-  const { updateCourse, deleteCourse, isLoading } = useCourseStore();
+  const { 
+    updateCourse, 
+    deleteCourse, 
+    isLoading,
+    topics,
+    isLoadingTopics,
+    fetchTopicsForCourse,
+    topicError,
+    clearTopicError 
+  } = useCourseStore();
+
+  // Fetch topics when component mounts or course changes
+  useEffect(() => {
+    if (course.topicsExtracted) {
+      fetchTopicsForCourse(course.id);
+    }
+  }, [course.id, course.topicsExtracted, fetchTopicsForCourse]);
 
   // Calculate course status
   const getCourseStatus = () => {
@@ -132,6 +150,24 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
     );
   };
 
+  const handleAddContent = () => {
+    if (onAddContent) {
+      onAddContent();
+    } else {
+      Alert.alert('Coming Soon', 'Content addition from course details will be available soon!');
+    }
+  };
+
+  const handleRetryTopics = () => {
+    clearTopicError();
+    fetchTopicsForCourse(course.id);
+  };
+
+  // Convert Topic to display format
+  const getTopicKeywords = (topic: Topic): string[] => {
+    return topic.content ? topic.content.split(', ').filter(k => k.trim()) : [];
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -223,16 +259,95 @@ export const CourseDetailScreen: React.FC<CourseDetailScreenProps> = ({
             {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
           </View>
 
-          {/* Topics Section (Placeholder) */}
+          {/* Topics Section - UPDATED */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Topics</Text>
-            <View style={styles.placeholderBox}>
-              <Text style={styles.placeholderIcon}>📝</Text>
-              <Text style={styles.placeholderText}>No topics extracted yet</Text>
-              <Text style={styles.placeholderSubtext}>
-                Upload a syllabus to automatically extract course topics
-              </Text>
+            <View style={styles.topicsHeader}>
+              <Text style={styles.sectionTitle}>Course Topics</Text>
+              {!course.topicsExtracted && (
+                <TouchableOpacity style={styles.addContentButton} onPress={handleAddContent}>
+                  <Text style={styles.addContentText}>+ Add Content</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {!course.topicsExtracted ? (
+              // No topics extracted yet
+              <View style={styles.placeholderBox}>
+                <Text style={styles.placeholderIcon}>📝</Text>
+                <Text style={styles.placeholderText}>No topics added yet</Text>
+                <Text style={styles.placeholderSubtext}>
+                  Upload a syllabus to automatically extract course topics
+                </Text>
+                <TouchableOpacity style={styles.placeholderButton} onPress={handleAddContent}>
+                  <Text style={styles.placeholderButtonText}>Add Course Content</Text>
+                </TouchableOpacity>
+              </View>
+            ) : isLoadingTopics ? (
+              // Loading topics
+              <View style={styles.placeholderBox}>
+                <Text style={styles.placeholderIcon}>⏳</Text>
+                <Text style={styles.placeholderText}>Loading topics...</Text>
+              </View>
+            ) : topicError ? (
+              // Error loading topics
+              <View style={styles.placeholderBox}>
+                <Text style={styles.placeholderIcon}>❌</Text>
+                <Text style={styles.placeholderText}>Failed to load topics</Text>
+                <Text style={styles.placeholderSubtext}>{topicError}</Text>
+                <TouchableOpacity style={styles.placeholderButton} onPress={handleRetryTopics}>
+                  <Text style={styles.placeholderButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : topics.length === 0 ? (
+              // No topics found
+              <View style={styles.placeholderBox}>
+                <Text style={styles.placeholderIcon}>📋</Text>
+                <Text style={styles.placeholderText}>No topics found</Text>
+                <Text style={styles.placeholderSubtext}>
+                  Topics may have been removed or not properly saved
+                </Text>
+                <TouchableOpacity style={styles.placeholderButton} onPress={handleAddContent}>
+                  <Text style={styles.placeholderButtonText}>Add Topics</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              // Display topics
+              <View>
+                <Text style={styles.topicsCount}>
+                  {topics.length} topic{topics.length !== 1 ? 's' : ''} available
+                </Text>
+                
+                {topics.map((topic, index) => {
+                  const keywords = getTopicKeywords(topic);
+                  
+                  return (
+                    <View key={topic.id} style={styles.topicCard}>
+                      <View style={styles.topicHeader}>
+                        <Text style={styles.topicNumber}>{index + 1}.</Text>
+                        <Text style={styles.topicTitle}>{topic.title}</Text>
+                      </View>
+                      
+                      {keywords.length > 0 && (
+                        <View style={styles.keywordsContainer}>
+                          <Text style={styles.keywordsLabel}>Keywords:</Text>
+                          <View style={styles.keywordsList}>
+                            {keywords.map((keyword, keyIndex) => (
+                              <View key={keyIndex} style={styles.keywordTag}>
+                                <Text style={styles.keywordText}>{keyword}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+                
+                <TouchableOpacity style={styles.editTopicsButton} onPress={handleAddContent}>
+                  <Text style={styles.editTopicsText}>✏️ Edit Topics</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Quiz History Section (Placeholder) */}
@@ -415,6 +530,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  placeholderButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.md,
+  },
+  placeholderButtonText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
   buttonContainer: {
     marginTop: spacing.lg,
   },
@@ -444,5 +571,88 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  topicsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  addContentButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  addContentText: {
+    fontSize: fontSize.base,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  topicsCount: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  topicCard: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  topicHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  topicNumber: {
+    fontSize: fontSize.base,
+    fontWeight: '500',
+    color: colors.textPrimary,
+    marginRight: spacing.xs,
+  },
+  topicTitle: {
+    fontSize: fontSize.base,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+  },
+  keywordsContainer: {
+    marginTop: spacing.xs,
+  },
+  keywordsLabel: {
+    fontSize: fontSize.base,
+    fontWeight: '500',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  keywordsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  keywordTag: {
+    backgroundColor: colors.secondary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  keywordText: {
+    fontSize: fontSize.base,
+    color: colors.textPrimary,
+  },
+  editTopicsButton: {
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  editTopicsText: {
+    color: colors.white,
+    fontSize: fontSize.base,
+    fontWeight: '600',
   },
 });
